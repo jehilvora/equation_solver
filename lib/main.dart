@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' show join;
 import 'package:path_provider/path_provider.dart';
+
+import 'package:http/http.dart' as http;
 
 Future<void> main() async {
   // Ensure that plugin services are initialized so that `availableCameras()`
@@ -129,6 +132,8 @@ class TakePictureScreenState extends State<TakePictureScreen> {
 // A widget that displays the picture taken by the user.
 class DisplayPictureScreen extends StatelessWidget {
   final String imagePath;
+  static final String localhost = 'http://192.168.1.4:5000';
+  static final String flaskImageProcessPath = localhost + '/processImage';
 
   const DisplayPictureScreen({Key key, this.imagePath}) : super(key: key);
 
@@ -139,6 +144,26 @@ class DisplayPictureScreen extends StatelessWidget {
       // The image is stored as a file on the device. Use the `Image.file`
       // constructor with the given path to display the image.
       body: Image.file(File(imagePath)),
+      floatingActionButton: FloatingActionButton(
+        child: Icon(Icons.send),
+        onPressed: uploadToServer,
+      ),
     );
   }
+
+  void uploadToServer() {
+    File file = File(imagePath);
+    String base64Image = base64Encode(file.readAsBytesSync());
+    print("sent data to server " + imagePath);
+    http.post(flaskImageProcessPath,
+        headers: {"Content-Type": "application/json"},
+        body: json.encode({ "image": base64Image }),
+    ).then((res) {
+      print(res.body);
+    }).catchError((err) {
+      print('Error occured');
+      print(err);
+    });
+  }
+
 }
